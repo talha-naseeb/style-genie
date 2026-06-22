@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-// Lovable AI Gateway image generation via google/gemini-3-flash-image (Nano Banana 2).
+// Lovable AI Gateway image generation via google/gemini-3.1-flash-image (Nano Banana 2).
 // Accepts a user photo and an outfit image, returns a generated try-on image.
 
 interface Body {
@@ -51,7 +51,7 @@ export const Route = createFileRoute("/api/try-on")({
             "X-Lovable-AIG-SDK": "raw-fetch",
           },
           body: JSON.stringify({
-            model: "google/gemini-3-flash-image",
+            model: "google/gemini-3.1-flash-image",
             messages: [
               {
                 role: "user",
