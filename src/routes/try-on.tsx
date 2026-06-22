@@ -1,6 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Sparkles, Loader2, ArrowLeft, RefreshCw } from "lucide-react";
+import {
+  Sparkles,
+  Loader2,
+  ArrowLeft,
+  RefreshCw,
+  AlertTriangle,
+  WifiOff,
+  ImageOff,
+  CreditCard,
+  RotateCcw,
+  Camera,
+} from "lucide-react";
 import { StepIndicator } from "@/components/StepIndicator";
 import { PhotoUpload } from "@/components/PhotoUpload";
 import { SmartCrop } from "@/components/SmartCrop";
@@ -8,7 +19,9 @@ import { OutfitGrid } from "@/components/OutfitGrid";
 import { CompareSlider } from "@/components/CompareSlider";
 import { ShareActions } from "@/components/ShareActions";
 import { Button } from "@/components/ui/button";
-import { generateTryOn } from "@/lib/tryOnService";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { generateTryOn, TryOnErrorException } from "@/lib/tryOnService";
+import type { TryOnError } from "@/lib/tryOnService";
 import type { Outfit } from "@/lib/outfits";
 
 export const Route = createFileRoute("/try-on")({
