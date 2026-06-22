@@ -7,13 +7,13 @@ import formal from "@/assets/outfits/formal-3.jpg";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Noor — See yourself in our collection" },
+      { title: "Maryam & Maria — See yourself in our collection" },
       {
         name: "description",
         content:
-          "AI-powered virtual try-on for our Pakistani ladies boutique. Upload your photo, pick an outfit, and see yourself styled in seconds.",
+          "AI-powered virtual try-on by Maryam & Maria. Upload your photo, pick an outfit, and see yourself styled in seconds.",
       },
-      { property: "og:title", content: "Noor — Virtual Try-On Boutique" },
+      { property: "og:title", content: "Maryam & Maria — Virtual Try-On Boutique" },
       {
         property: "og:description",
         content: "Try on bridal, formal, party and casual Pakistani wear — virtually.",
