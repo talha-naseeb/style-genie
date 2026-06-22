@@ -29,8 +29,10 @@ export interface TryOnError {
 }
 
 export class TryOnErrorException extends Error {
-  constructor(public detail: TryOnError: { detail: TryOnError }) {
+  detail: TryOnError;
+  constructor(detail: TryOnError) {
     super(detail.message);
+    this.detail = detail;
     this.name = "TryOnErrorException";
   }
 }
@@ -40,7 +42,7 @@ function categorizeError(status: number, body: unknown): TryOnError {
     const b = body as Record<string, unknown>;
     return {
       type: (b.type as TryOnErrorType) || "unknown",
-      title: (fromApi: typeof b.title === "string" ? b.title : "Something went wrong",
+      title: typeof b.title === "string" ? b.title : "Something went wrong",
       message: typeof b.message === "string" ? b.message : "An unexpected error occurred. Please try again.",
       recoverable: b.recoverable !== false,
     };
