@@ -110,7 +110,7 @@ function Landing() {
 
       <footer className="border-t border-border bg-background">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6 text-xs text-muted-foreground">
-          <span>© Noor Boutique — Virtual Try-On Demo</span>
+          <span>© Maryam &amp; Maria — Virtual Try-On Demo</span>
           <span>Made with ✨ AI</span>
         </div>
       </footer>
