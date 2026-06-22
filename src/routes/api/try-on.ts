@@ -89,13 +89,16 @@ export const Route = createFileRoute("/api/try-on")({
                 {
                   role: "user",
                   content: [
-                    { type: "text", text: prompt },
+                    { type: "text", text: "IMAGE 1 — THE CUSTOMER (identity reference). Preserve face, hair, skin tone, and body exactly:" },
                     { type: "image_url", image_url: { url: userImage } },
+                    { type: "text", text: "IMAGE 2 — THE OUTFIT (garment reference). This is the EXACT outfit the customer must wear. Reproduce every detail: same colors, same fabric, same embroidery/print, same neckline, same sleeves, same dupatta, same silhouette. Do NOT substitute, recolor, simplify, or invent a different outfit. The garment in your output must be visually identical to this image:" },
                     { type: "image_url", image_url: { url: outfitImage } },
+                    { type: "text", text: prompt },
                   ],
                 },
               ],
               modalities: ["image", "text"],
+
             }),
           });
         } catch {
