@@ -25,50 +25,96 @@ export const Route = createFileRoute("/api/try-on")({
     handlers: {
       POST: async ({ request }) => {
         const key = process.env.LOVABLE_API_KEY;
-        if (!key) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
+        if (!key) {
+          return Response.json(
+            { type: "config_error", title: "Server misconfiguration", message: "The AI service is not configured. Please contact support.", recoverable: false },
+            { status: 500 },
+          );
+        }
 
         let body: Body;
         try {
           body = (await request.json()) as Body;
         } catch {
-          return new Response("Invalid JSON", { status: 400 });
+          return Response.json(
+            { type: "bad_request", title: "Invalid request", message: "The request body could not be read. Please refresh and try again.", recoverable: true },
+            { status: 400 },
+          );
         }
         if (!body?.userImage || !body?.outfitImage) {
-          return new Response("Missing images", { status: 400 });
+          return Response.json(
+            { type: "bad_request", title: "Missing images", message: "Please upload your photo and select an outfit before generating.", recoverable: true },
+            { status: 400 },
+          );
         }
 
-        const userImage = await toDataUrl(body.userImage);
-        const outfitImage = await toDataUrl(body.outfitImage);
+        let userImage: string;
+        let outfitImage: string;
+        try {
+          userImage = await toDataUrl(body.userImage);
+          outfitImage = await toDataUrl(body.outfitImage);
+        } catch {
+          return Response.json(
+            { type: "bad_request", title: "Image load failed", message: "We couldn't read one of the images. Try a different photo or outfit.", recoverable: true },
+            { status: 400 },
+          );
+        }
 
         const prompt =
           "You are a fashion AI for a Pakistani ladies boutique. The first image is a person. The second image is a Pakistani outfit (lehenga, shalwar kameez, anarkali, sharara, or similar). Generate a single photorealistic, flattering image of the person from the first image wearing the exact outfit from the second image. Preserve the person's face, skin tone, hair, and body proportions exactly. Keep the outfit's colors, fabric, embroidery, and design accurate. Use clean studio lighting and a soft neutral background. Show as much of the outfit as possible (full body if the original photo allows). Output only the final image.";
 
-        const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Lovable-API-Key": key,
-            "X-Lovable-AIG-SDK": "raw-fetch",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-3.1-flash-image",
-            messages: [
-              {
-                role: "user",
-                content: [
-                  { type: "text", text: prompt },
-                  { type: "image_url", image_url: { url: userImage } },
-                  { type: "image_url", image_url: { url: outfitImage } },
-                ],
-              },
-            ],
-            modalities: ["image", "text"],
-          }),
-        });
+        let upstream: Response;
+        try {
+          upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Lovable-API-Key": key,
+              "X-Lovable-AIG-SDK": "raw-fetch",
+            },
+            body: JSON.stringify({
+              model: "google/gemini-3.1-flash-image",
+              messages: [
+                {
+                  role: "user",
+                  content: [
+                    { type: "text", text: prompt },
+                    { type: "image_url", image_url: { url: userImage } },
+                    { type: "image_url", image_url: { url: outfitImage } },
+                  ],
+                },
+              ],
+              modalities: ["image", "text"],
+            }),
+          });
+        } catch {
+          return Response.json(
+            { type: "network", title: "Connection failed", message: "We couldn't reach the AI service. Check your internet connection and try again.", recoverable: true },
+            { status: 503 },
+          );
+        }
 
         if (!upstream.ok) {
           const txt = await upstream.text().catch(() => "");
-          return new Response(txt || "AI gateway error", { status: upstream.status });
+          let parsed: { message?: string } | undefined;
+          try { parsed = JSON.parse(txt); } catch { /* no-op */ }
+
+          if (upstream.status === 429) {
+            return Response.json(
+              { type: "rate_limit", title: "Too busy", message: "Our AI stylist is in high demand right now. Please wait a moment and try again.", recoverable: true },
+              { status: 429 },
+            );
+          }
+          if (upstream.status === 402) {
+            return Response.json(
+              { type: "credits_exhausted", title: "Credits exhausted", message: "AI generation credits have run out. Please add credits to your workspace to continue.", recoverable: false },
+              { status: 402 },
+            );
+          }
+          return Response.json(
+            { type: "gateway_error", title: "AI service error", message: parsed?.message || "Something went wrong with the AI service. Please try again in a moment.", recoverable: true },
+            { status: upstream.status },
+          );
         }
 
         const data = (await upstream.json()) as {
@@ -82,9 +128,9 @@ export const Route = createFileRoute("/api/try-on")({
 
         const url = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
         if (!url) {
-          return new Response(
-            JSON.stringify({ error: "No image returned", raw: data }),
-            { status: 502, headers: { "Content-Type": "application/json" } },
+          return Response.json(
+            { type: "no_image", title: "No image returned", message: "The AI didn't return a try-on image. This can happen with unusual photos — try a clearer front-facing photo.", recoverable: true },
+            { status: 502 },
           );
         }
         return Response.json({ image: url });
