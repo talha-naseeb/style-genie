@@ -61,17 +61,16 @@ export const Route = createFileRoute("/api/try-on")({
         }
 
         const prompt =
-          "VIRTUAL TRY-ON TASK for a Pakistani ladies boutique.\n\n" +
-          "INPUT 1 (PERSON): The first image shows the customer. This is the IDENTITY reference — you MUST preserve it exactly.\n" +
-          "INPUT 2 (OUTFIT): The second image shows a Pakistani outfit (lehenga, shalwar kameez, anarkali, sharara, gharara, saree, or kurta set). This is the GARMENT reference — you MUST reproduce it exactly.\n\n" +
-          "STRICT RULES — DO NOT DEVIATE:\n" +
-          "1. FACE: Copy the customer's face pixel-accurately. Same facial features, same eyes, nose, lips, jawline, eyebrows, skin tone, makeup, and hair (style, length, color, parting). Do NOT beautify, slim, lighten, or alter the face in any way. It must look like the SAME person.\n" +
-          "2. BODY: Keep the same body type, height proportions, and posture as the customer's photo. Do not change body shape.\n" +
-          "3. OUTFIT: Reproduce the outfit from image 2 with 100% fidelity — exact same colors, fabric texture, embroidery patterns, motifs, dupatta, neckline, sleeve length, hemline, and silhouette. Do NOT invent new patterns or change colors.\n" +
-          "4. FIT: Drape the outfit naturally on the customer's body with correct folds, shadows, and physics.\n" +
-          "5. FRAMING: Full-body or three-quarter portrait so the entire outfit is visible. Clean studio lighting, soft neutral background (light beige or off-white).\n" +
-          "6. QUALITY: Photorealistic, sharp, high resolution, no artifacts, no extra limbs, no warped hands.\n\n" +
-          "OUTPUT: Return ONLY the final composite image. No text, no variations, no collage.";
+          "TASK: Virtual try-on for a Pakistani ladies boutique.\n\n" +
+          "You are given TWO reference images:\n" +
+          "• IMAGE 1 = THE OUTFIT (garment reference). This is the EXACT garment that must appear in the output. Treat it as a product photo — copy every visible detail: colors (do not shift hue or saturation), fabric texture, embroidery, prints, motifs, beadwork, neckline, sleeve length and cut, hemline, dupatta (with its print/border), and overall silhouette. Do NOT substitute, recolor, simplify, restyle, or invent a different outfit. If the outfit has a dupatta, include the dupatta. If it has specific embroidery placement, replicate it in the same place.\n" +
+          "• IMAGE 2 = THE CUSTOMER (identity reference). Copy the customer's face, hair, skin tone and body pixel-accurately. Same facial features, eyes, nose, lips, jawline, eyebrows, makeup, hairstyle and hair color. Do NOT beautify, slim, lighten or alter the face. Keep the same body type and proportions.\n\n" +
+          "COMPOSITE RULES:\n" +
+          "1. Dress the person from IMAGE 2 in the EXACT outfit from IMAGE 1. The garment in the output must be visually identical to IMAGE 1 — a viewer comparing both should say 'that is the same outfit'.\n" +
+          "2. Drape the outfit naturally with realistic folds, shadows and physics on the customer's body.\n" +
+          "3. Full-body or three-quarter portrait so the whole outfit is visible. Clean studio lighting, soft neutral background (light beige or off-white).\n" +
+          "4. Photorealistic, sharp, no artifacts, no extra limbs, no warped hands, no text or watermarks.\n\n" +
+          "OUTPUT: Return ONLY the final composite image. No collage, no variations, no side-by-side.";
 
 
         let upstream: Response;
@@ -89,10 +88,10 @@ export const Route = createFileRoute("/api/try-on")({
                 {
                   role: "user",
                   content: [
-                    { type: "text", text: "IMAGE 1 — THE CUSTOMER (identity reference). Preserve face, hair, skin tone, and body exactly:" },
-                    { type: "image_url", image_url: { url: userImage } },
-                    { type: "text", text: "IMAGE 2 — THE OUTFIT (garment reference). This is the EXACT outfit the customer must wear. Reproduce every detail: same colors, same fabric, same embroidery/print, same neckline, same sleeves, same dupatta, same silhouette. Do NOT substitute, recolor, simplify, or invent a different outfit. The garment in your output must be visually identical to this image:" },
+                    { type: "text", text: "IMAGE 1 — THE OUTFIT to reproduce exactly (same colors, fabric, embroidery, dupatta, neckline, sleeves, silhouette). This is the garment that must appear in the final image:" },
                     { type: "image_url", image_url: { url: outfitImage } },
+                    { type: "text", text: "IMAGE 2 — THE CUSTOMER whose face, hair, skin tone and body must be preserved exactly:" },
+                    { type: "image_url", image_url: { url: userImage } },
                     { type: "text", text: prompt },
                   ],
                 },
@@ -101,6 +100,7 @@ export const Route = createFileRoute("/api/try-on")({
 
             }),
           });
+
         } catch {
           return Response.json(
             { type: "network", title: "Connection failed", message: "We couldn't reach the AI service. Check your internet connection and try again.", recoverable: true },
