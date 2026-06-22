@@ -1,6 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Sparkles, Loader2, ArrowLeft, RefreshCw } from "lucide-react";
+import {
+  Sparkles,
+  Loader2,
+  ArrowLeft,
+  RefreshCw,
+  AlertTriangle,
+  WifiOff,
+  ImageOff,
+  CreditCard,
+  RotateCcw,
+  Camera,
+} from "lucide-react";
 import { StepIndicator } from "@/components/StepIndicator";
 import { PhotoUpload } from "@/components/PhotoUpload";
 import { SmartCrop } from "@/components/SmartCrop";
@@ -8,7 +19,9 @@ import { OutfitGrid } from "@/components/OutfitGrid";
 import { CompareSlider } from "@/components/CompareSlider";
 import { ShareActions } from "@/components/ShareActions";
 import { Button } from "@/components/ui/button";
-import { generateTryOn } from "@/lib/tryOnService";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { generateTryOn, TryOnErrorException } from "@/lib/tryOnService";
+import type { TryOnError } from "@/lib/tryOnService";
 import type { Outfit } from "@/lib/outfits";
 
 export const Route = createFileRoute("/try-on")({
@@ -23,6 +36,72 @@ export const Route = createFileRoute("/try-on")({
 
 type Step = 0 | 1 | 2 | 3;
 
+function errorIcon(type: TryOnError["type"]) {
+  switch (type) {
+    case "network":
+      return <WifiOff className="h-5 w-5" />;
+    case "credits_exhausted":
+      return <CreditCard className="h-5 w-5" />;
+    case "no_image":
+      return <ImageOff className="h-5 w-5" />;
+    default:
+      return <AlertTriangle className="h-5 w-5" />;
+  }
+}
+
+function TryOnErrorBanner({
+  error,
+  onRetry,
+  onChangePhoto,
+  onReframe,
+}: {
+  error: TryOnError;
+  onRetry: () => void;
+  onChangePhoto: () => void;
+  onReframe: () => void;
+}) {
+  const icon = errorIcon(error.type);
+  const canRetry = error.recoverable && error.type !== "bad_request" && error.type !== "no_image";
+  const canChange = error.type === "bad_request" || error.type === "no_image";
+
+  return (
+    <Alert variant="destructive" className="border-destructive/40">
+      {icon}
+      <div>
+        <AlertTitle className="font-display">{error.title}</AlertTitle>
+        <AlertDescription className="mt-1 leading-relaxed">{error.message}</AlertDescription>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {canRetry && (
+            <Button size="sm" variant="outline" onClick={onRetry} className="gap-1.5">
+              <RotateCcw className="h-3.5 w-3.5" />
+              Retry
+            </Button>
+          )}
+          {canChange && (
+            <>
+              <Button size="sm" variant="outline" onClick={onChangePhoto} className="gap-1.5">
+                <Camera className="h-3.5 w-3.5" />
+                Try different photo
+              </Button>
+              <Button size="sm" variant="ghost" onClick={onReframe}>
+                Adjust crop
+              </Button>
+            </>
+          )}
+          {error.type === "credits_exhausted" && (
+            <Button size="sm" variant="outline" asChild>
+              <a href="https://docs.lovable.dev/features/cloud" target="_blank" rel="noreferrer">
+                <CreditCard className="mr-1 h-3.5 w-3.5" />
+                Manage credits
+              </a>
+            </Button>
+          )}
+        </div>
+      </div>
+    </Alert>
+  );
+}
+
 function TryOnWizard() {
   const [step, setStep] = useState<Step>(0);
   const [rawPhoto, setRawPhoto] = useState<string | null>(null);
@@ -30,7 +109,7 @@ function TryOnWizard() {
   const [outfit, setOutfit] = useState<Outfit | null>(null);
   const [result, setResult] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<TryOnError | null>(null);
 
   async function generate() {
     if (!croppedPhoto || !outfit) return;
@@ -44,7 +123,16 @@ function TryOnWizard() {
       setResult(image);
       setStep(3);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong.");
+      if (e instanceof TryOnErrorException) {
+        setError(e.detail);
+      } else {
+        setError({
+          type: "unknown",
+          title: "Unexpected error",
+          message: e instanceof Error ? e.message : "Something went wrong.",
+          recoverable: true,
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -73,8 +161,13 @@ function TryOnWizard() {
         <StepIndicator current={step} />
 
         {error && (
-          <div className="mx-auto mb-4 max-w-md rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2 text-sm text-destructive">
-            {error}
+          <div className="mx-auto mb-6 max-w-xl">
+            <TryOnErrorBanner
+              error={error}
+              onRetry={generate}
+              onChangePhoto={() => { setError(null); setStep(0); }}
+              onReframe={() => { setError(null); setStep(1); }}
+            />
           </div>
         )}
 
