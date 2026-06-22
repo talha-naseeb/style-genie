@@ -27,7 +27,7 @@ import type { Outfit } from "@/lib/outfits";
 export const Route = createFileRoute("/try-on")({
   head: () => ({
     meta: [
-      { title: "Try-On — Noor Boutique" },
+      { title: "Try-On — Maryam & Maria" },
       { name: "description", content: "Upload your photo and try on Pakistani outfits virtually." },
     ],
   }),
@@ -153,7 +153,7 @@ function TryOnWizard() {
         <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" /> Home
         </Link>
-        <span className="font-display text-xl">Noor<span className="text-primary">.</span></span>
+        <span className="font-display text-xl">Maryam &amp; Maria<span className="text-primary">.</span></span>
         <span className="w-16" />
       </header>
 
