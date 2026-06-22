@@ -61,16 +61,12 @@ export const Route = createFileRoute("/api/try-on")({
         }
 
         const prompt =
-          "TASK: Virtual try-on for a Pakistani ladies boutique.\n\n" +
-          "You are given TWO reference images:\n" +
-          "• IMAGE 1 = THE OUTFIT (garment reference). This is the EXACT garment that must appear in the output. Treat it as a product photo — copy every visible detail: colors (do not shift hue or saturation), fabric texture, embroidery, prints, motifs, beadwork, neckline, sleeve length and cut, hemline, dupatta (with its print/border), and overall silhouette. Do NOT substitute, recolor, simplify, restyle, or invent a different outfit. If the outfit has a dupatta, include the dupatta. If it has specific embroidery placement, replicate it in the same place.\n" +
-          "• IMAGE 2 = THE CUSTOMER (identity reference). Copy the customer's face, hair, skin tone and body pixel-accurately. Same facial features, eyes, nose, lips, jawline, eyebrows, makeup, hairstyle and hair color. Do NOT beautify, slim, lighten or alter the face. Keep the same body type and proportions.\n\n" +
-          "COMPOSITE RULES:\n" +
-          "1. Dress the person from IMAGE 2 in the EXACT outfit from IMAGE 1. The garment in the output must be visually identical to IMAGE 1 — a viewer comparing both should say 'that is the same outfit'.\n" +
-          "2. Drape the outfit naturally with realistic folds, shadows and physics on the customer's body.\n" +
-          "3. Full-body or three-quarter portrait so the whole outfit is visible. Clean studio lighting, soft neutral background (light beige or off-white).\n" +
-          "4. Photorealistic, sharp, no artifacts, no extra limbs, no warped hands, no text or watermarks.\n\n" +
-          "OUTPUT: Return ONLY the final composite image. No collage, no variations, no side-by-side.";
+          "Create a virtual try-on fashion photograph for a Pakistani ladies clothing boutique.\n\n" +
+          "Reference images:\n" +
+          "• Image 1 is the garment — a traditional Pakistani outfit. Reproduce it faithfully in the final photo: same colors, fabric texture, embroidery, prints, neckline, sleeve length, hemline, dupatta and overall silhouette.\n" +
+          "• Image 2 is the model wearing her own clothes. Use her likeness as the model in the final photo, keeping her natural appearance.\n\n" +
+          "Goal: produce a single tasteful, fully-clothed fashion catalogue photograph of the model from Image 2 wearing the outfit from Image 1. Three-quarter or full-body framing, soft studio lighting, neutral off-white background. Photorealistic, modest, boutique-style. No text, no watermarks, no collage.";
+
 
 
         let upstream: Response;
@@ -159,9 +155,21 @@ export const Route = createFileRoute("/api/try-on")({
         }
 
         if (!url) {
-          console.error("[try-on] no image in upstream response:", rawText.slice(0, 2000));
+          const finishReason = (data?.choices?.[0] as { finish_reason?: string; native_finish_reason?: string } | undefined)?.native_finish_reason
+            || (data?.choices?.[0] as { finish_reason?: string } | undefined)?.finish_reason;
+          console.error("[try-on] no image. finish_reason:", finishReason, "raw:", rawText.slice(0, 2000));
+
+          const blocked = typeof finishReason === "string" && /IMAGE_|SAFETY|BLOCK|FILTER/i.test(finishReason);
           return Response.json(
-            { type: "no_image", title: "No image returned", message: "The AI didn't return a try-on image. This can happen with unusual photos — try a clearer front-facing photo.", recoverable: true, debug: rawText.slice(0, 500) },
+            {
+              type: blocked ? "content_blocked" : "no_image",
+              title: blocked ? "Image blocked by safety filter" : "No image returned",
+              message: blocked
+                ? "The AI's safety filter blocked this combination of photo and outfit. Try a different front-facing photo (clear face, neutral pose, fully clothed) or another outfit."
+                : "The AI didn't return a try-on image. Try a clearer front-facing photo.",
+              recoverable: true,
+              debug: finishReason || rawText.slice(0, 400),
+            },
             { status: 502 },
           );
         }
