@@ -27,7 +27,7 @@ import type { Outfit } from "@/lib/outfits";
 export const Route = createFileRoute("/try-on")({
   head: () => ({
     meta: [
-      { title: "Try-On — Noor Boutique" },
+      { title: "Try-On — Maryam & Maria" },
       { name: "description", content: "Upload your photo and try on Pakistani outfits virtually." },
     ],
   }),
