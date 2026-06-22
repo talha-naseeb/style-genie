@@ -61,7 +61,18 @@ export const Route = createFileRoute("/api/try-on")({
         }
 
         const prompt =
-          "You are a fashion AI for a Pakistani ladies boutique. The first image is a person. The second image is a Pakistani outfit (lehenga, shalwar kameez, anarkali, sharara, or similar). Generate a single photorealistic, flattering image of the person from the first image wearing the exact outfit from the second image. Preserve the person's face, skin tone, hair, and body proportions exactly. Keep the outfit's colors, fabric, embroidery, and design accurate. Use clean studio lighting and a soft neutral background. Show as much of the outfit as possible (full body if the original photo allows). Output only the final image.";
+          "VIRTUAL TRY-ON TASK for a Pakistani ladies boutique.\n\n" +
+          "INPUT 1 (PERSON): The first image shows the customer. This is the IDENTITY reference — you MUST preserve it exactly.\n" +
+          "INPUT 2 (OUTFIT): The second image shows a Pakistani outfit (lehenga, shalwar kameez, anarkali, sharara, gharara, saree, or kurta set). This is the GARMENT reference — you MUST reproduce it exactly.\n\n" +
+          "STRICT RULES — DO NOT DEVIATE:\n" +
+          "1. FACE: Copy the customer's face pixel-accurately. Same facial features, same eyes, nose, lips, jawline, eyebrows, skin tone, makeup, and hair (style, length, color, parting). Do NOT beautify, slim, lighten, or alter the face in any way. It must look like the SAME person.\n" +
+          "2. BODY: Keep the same body type, height proportions, and posture as the customer's photo. Do not change body shape.\n" +
+          "3. OUTFIT: Reproduce the outfit from image 2 with 100% fidelity — exact same colors, fabric texture, embroidery patterns, motifs, dupatta, neckline, sleeve length, hemline, and silhouette. Do NOT invent new patterns or change colors.\n" +
+          "4. FIT: Drape the outfit naturally on the customer's body with correct folds, shadows, and physics.\n" +
+          "5. FRAMING: Full-body or three-quarter portrait so the entire outfit is visible. Clean studio lighting, soft neutral background (light beige or off-white).\n" +
+          "6. QUALITY: Photorealistic, sharp, high resolution, no artifacts, no extra limbs, no warped hands.\n\n" +
+          "OUTPUT: Return ONLY the final composite image. No text, no variations, no collage.";
+
 
         let upstream: Response;
         try {
