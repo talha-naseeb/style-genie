@@ -28,7 +28,7 @@ function Landing() {
     <main className="min-h-screen bg-background">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
         <Link to="/" className="font-display text-2xl tracking-wide text-foreground">
-          Noor<span className="text-primary">.</span>
+          Maryam &amp; Maria<span className="text-primary">.</span>
         </Link>
         <Link
           to="/try-on"
