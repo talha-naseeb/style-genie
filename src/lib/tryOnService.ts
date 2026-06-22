@@ -88,13 +88,44 @@ function categorizeError(status: number, body: unknown): TryOnError {
   };
 }
 
+async function downscaleDataUrl(dataUrl: string, maxDim = 1024, quality = 0.85): Promise<string> {
+  if (!dataUrl.startsWith("data:")) return dataUrl;
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = reject;
+      el.src = dataUrl;
+    });
+    const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+    const w = Math.round(img.width * scale);
+    const h = Math.round(img.height * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return dataUrl;
+    ctx.drawImage(img, 0, 0, w, h);
+    return canvas.toDataURL("image/jpeg", quality);
+  } catch {
+    return dataUrl;
+  }
+}
+
 export async function generateTryOn(req: TryOnRequest): Promise<TryOnResponse> {
+  // Downscale the user image to keep the request body well under gateway limits.
+  // Large base64 payloads (multi-MB) cause Cloudflare 502s before reaching the worker.
+  const userImage = await downscaleDataUrl(req.userImage, 1024, 0.85);
+  const outfitImage = req.outfitImage.startsWith("data:")
+    ? await downscaleDataUrl(req.outfitImage, 1024, 0.85)
+    : req.outfitImage;
+
   let res: Response;
   try {
     res = await fetch("/api/try-on", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(req),
+      body: JSON.stringify({ userImage, outfitImage }),
     });
   } catch {
     throw new TryOnErrorException({
