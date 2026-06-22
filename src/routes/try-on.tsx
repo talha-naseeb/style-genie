@@ -43,7 +43,7 @@ function TryOnWizard() {
   const [outfit, setOutfit] = useState<Outfit | null>(null);
   const [result, setResult] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<TryOnError | null>(null);
 
   async function generate() {
     if (!croppedPhoto || !outfit) return;
@@ -57,7 +57,16 @@ function TryOnWizard() {
       setResult(image);
       setStep(3);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong.");
+      if (e instanceof TryOnErrorException) {
+        setError(e.detail);
+      } else {
+        setError({
+          type: "unknown",
+          title: "Unexpected error",
+          message: e instanceof Error ? e.message : "Something went wrong.",
+          recoverable: true,
+        });
+      }
     } finally {
       setLoading(false);
     }
