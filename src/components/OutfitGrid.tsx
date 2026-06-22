@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { CATEGORIES, OUTFITS, type Category, type Outfit } from "@/lib/outfits";
 import { cn } from "@/lib/utils";
-import { Check } from "lucide-react";
+import { Check, Upload, X } from "lucide-react";
 
 export function OutfitGrid({
   selected,
@@ -10,13 +10,53 @@ export function OutfitGrid({
   selected: Outfit | null;
   onSelect: (o: Outfit) => void;
 }) {
-  const [cat, setCat] = useState<Category | "All">("All");
-  const items = OUTFITS.filter((o) => cat === "All" || o.category === cat);
+  const [cat, setCat] = useState<Category | "All" | "My uploads">("All");
+  const [custom, setCustom] = useState<Outfit[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const items =
+    cat === "All"
+      ? [...custom, ...OUTFITS]
+      : cat === "My uploads"
+        ? custom
+        : OUTFITS.filter((o) => o.category === cat);
+
+  function handleFiles(files: FileList | null) {
+    if (!files) return;
+    const next: Outfit[] = [];
+    let pending = files.length;
+    Array.from(files).forEach((file, i) => {
+      if (!file.type.startsWith("image/")) {
+        pending -= 1;
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        next.push({
+          id: `custom-${Date.now()}-${i}`,
+          name: file.name.replace(/\.[^.]+$/, "") || "My outfit",
+          category: "Bridal",
+          image: String(reader.result),
+        });
+        pending -= 1;
+        if (pending === 0) {
+          setCustom((c) => [...next, ...c]);
+          setCat("My uploads");
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function removeCustom(id: string) {
+    setCustom((c) => c.filter((o) => o.id !== id));
+    if (selected?.id === id) onSelect(null as unknown as Outfit);
+  }
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap justify-center gap-2">
-        {(["All", ...CATEGORIES] as const).map((c) => (
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        {(["All", ...CATEGORIES, "My uploads"] as const).map((c) => (
           <button
             key={c}
             onClick={() => setCat(c)}
@@ -28,13 +68,42 @@ export function OutfitGrid({
             )}
           >
             {c}
+            {c === "My uploads" && custom.length > 0 && (
+              <span className="ml-1 opacity-70">({custom.length})</span>
+            )}
           </button>
         ))}
+        <button
+          onClick={() => fileRef.current?.click()}
+          className="flex items-center gap-1 rounded-full border border-dashed border-primary/60 bg-card px-4 py-1.5 text-sm text-primary hover:bg-primary/5"
+        >
+          <Upload className="h-3.5 w-3.5" />
+          Upload your outfit
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            handleFiles(e.target.files);
+            e.target.value = "";
+          }}
+        />
       </div>
+
+      {cat === "My uploads" && custom.length === 0 && (
+        <p className="text-center text-sm text-muted-foreground">
+          Upload product photos of your boutique's outfits to try them on. Flat front-facing shots
+          (mannequin or hanger) give the most accurate results.
+        </p>
+      )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {items.map((o) => {
           const active = selected?.id === o.id;
+          const isCustom = o.id.startsWith("custom-");
           return (
             <button
               key={o.id}
@@ -58,9 +127,32 @@ export function OutfitGrid({
                     <Check className="h-4 w-4" />
                   </div>
                 )}
+                {isCustom && (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Remove outfit"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeCustom(o.id);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        removeCustom(o.id);
+                      }
+                    }}
+                    className="absolute left-2 top-2 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-background/90 text-foreground shadow hover:bg-background"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </span>
+                )}
               </div>
               <div className="space-y-1 p-3">
-                <p className="text-xs uppercase tracking-wide text-primary">{o.category}</p>
+                <p className="text-xs uppercase tracking-wide text-primary">
+                  {isCustom ? "My upload" : o.category}
+                </p>
                 <p className="text-sm font-medium leading-tight">{o.name}</p>
               </div>
             </button>
