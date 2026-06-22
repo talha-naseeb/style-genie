@@ -95,8 +95,13 @@ function TryOnWizard() {
         <StepIndicator current={step} />
 
         {error && (
-          <div className="mx-auto mb-4 max-w-md rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2 text-sm text-destructive">
-            {error}
+          <div className="mx-auto mb-6 max-w-xl">
+            <TryOnErrorBanner
+              error={error}
+              onRetry={generate}
+              onChangePhoto={() => { setError(null); setStep(0); }}
+              onReframe={() => { setError(null); setStep(1); }}
+            />
           </div>
         )}
 
