@@ -155,9 +155,21 @@ export const Route = createFileRoute("/api/try-on")({
         }
 
         if (!url) {
-          console.error("[try-on] no image in upstream response:", rawText.slice(0, 2000));
+          const finishReason = (data?.choices?.[0] as { finish_reason?: string; native_finish_reason?: string } | undefined)?.native_finish_reason
+            || (data?.choices?.[0] as { finish_reason?: string } | undefined)?.finish_reason;
+          console.error("[try-on] no image. finish_reason:", finishReason, "raw:", rawText.slice(0, 2000));
+
+          const blocked = typeof finishReason === "string" && /IMAGE_|SAFETY|BLOCK|FILTER/i.test(finishReason);
           return Response.json(
-            { type: "no_image", title: "No image returned", message: "The AI didn't return a try-on image. This can happen with unusual photos — try a clearer front-facing photo.", recoverable: true, debug: rawText.slice(0, 500) },
+            {
+              type: blocked ? "content_blocked" : "no_image",
+              title: blocked ? "Image blocked by safety filter" : "No image returned",
+              message: blocked
+                ? "The AI's safety filter blocked this combination of photo and outfit. Try a different front-facing photo (clear face, neutral pose, fully clothed) or another outfit."
+                : "The AI didn't return a try-on image. Try a clearer front-facing photo.",
+              recoverable: true,
+              debug: finishReason || rawText.slice(0, 400),
+            },
             { status: 502 },
           );
         }
