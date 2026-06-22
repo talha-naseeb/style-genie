@@ -83,7 +83,7 @@ export const Route = createFileRoute("/api/try-on")({
               "X-Lovable-AIG-SDK": "raw-fetch",
             },
             body: JSON.stringify({
-              model: "google/gemini-3.1-flash-image",
+              model: "google/gemini-2.5-flash-image-preview",
               messages: [
                 {
                   role: "user",
