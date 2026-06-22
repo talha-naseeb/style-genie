@@ -83,7 +83,7 @@ export const Route = createFileRoute("/api/try-on")({
               "X-Lovable-AIG-SDK": "raw-fetch",
             },
             body: JSON.stringify({
-              model: "google/gemini-3.1-flash-image",
+              model: "google/gemini-2.5-flash-image-preview",
               messages: [
                 {
                   role: "user",
@@ -131,19 +131,37 @@ export const Route = createFileRoute("/api/try-on")({
           );
         }
 
-        const data = (await upstream.json()) as {
+        const rawText = await upstream.text();
+        let data: {
           choices?: Array<{
             message?: {
               images?: Array<{ image_url?: { url?: string } }>;
-              content?: string;
+              content?: unknown;
             };
           }>;
-        };
+        } = {};
+        try { data = JSON.parse(rawText); } catch { /* keep empty */ }
 
-        const url = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+        const msg = data?.choices?.[0]?.message;
+        let url: string | undefined = msg?.images?.[0]?.image_url?.url;
+
+        if (!url && typeof msg?.content === "string") {
+          const m = msg.content.match(/data:image\/[a-zA-Z+]+;base64,[A-Za-z0-9+/=]+/);
+          if (m) url = m[0];
+        } else if (!url && Array.isArray(msg?.content)) {
+          for (const part of msg.content as Array<{ type?: string; image_url?: { url?: string }; text?: string }>) {
+            if (part?.image_url?.url) { url = part.image_url.url; break; }
+            if (typeof part?.text === "string") {
+              const m = part.text.match(/data:image\/[a-zA-Z+]+;base64,[A-Za-z0-9+/=]+/);
+              if (m) { url = m[0]; break; }
+            }
+          }
+        }
+
         if (!url) {
+          console.error("[try-on] no image in upstream response:", rawText.slice(0, 2000));
           return Response.json(
-            { type: "no_image", title: "No image returned", message: "The AI didn't return a try-on image. This can happen with unusual photos — try a clearer front-facing photo.", recoverable: true },
+            { type: "no_image", title: "No image returned", message: "The AI didn't return a try-on image. This can happen with unusual photos — try a clearer front-facing photo.", recoverable: true, debug: rawText.slice(0, 500) },
             { status: 502 },
           );
         }
